@@ -3,7 +3,9 @@ import User from "../models/userModel.js";
 
 const authMiddleware = async (req, res, next) => {
     try {
-        const token = req.headers.authorization.split(" ")[1];
+        const auth = req.headers.authorization || "";
+        const parts = auth.split(" ");
+        const token = parts.length === 2 && parts[0] === "Bearer" ? parts[1] : null;
         if(!token) {
             return res.status(401).json({ message: "No token provided" });
         }
