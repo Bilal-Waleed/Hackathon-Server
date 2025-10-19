@@ -6,6 +6,7 @@ import cors from "cors";
 import reportRoutes from "./routes/reportRoutes.js";
 import vitalsRoutes from "./routes/vitalsRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
+import statsRoutes from "./routes/statsRoutes.js";
 
 const app = express();
 dns.setDefaultResultOrder('ipv4first');
@@ -27,6 +28,7 @@ app.use("/api", userRoute);
 app.use("/api/reports", reportRoutes);
 app.use("/api/vitals", vitalsRoutes);
 app.use("/api/files", fileRoutes);
+app.use("/api/stats", statsRoutes);
 
 connectDB();
 
