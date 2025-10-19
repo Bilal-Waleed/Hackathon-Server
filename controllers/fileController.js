@@ -17,7 +17,19 @@ export const extractPdfPages = async (req, res) => {
     if ((!filePublicId && !fileUrl) || !folder) return res.status(400).json({ message: 'Missing fields' });
     const cloud = process.env.CLOUDINARY_CLOUD_NAME;
     const items = [];
-    const total = Math.max(1, Number(pages));
+    let total = Number(pages);
+    if (!total || total < 1) {
+      if (filePublicId) {
+        try {
+          const info = await cloudinary.api.resource(filePublicId, { resource_type: 'image' });
+          total = Number(info.pages) || 1;
+        } catch {
+          total = 1;
+        }
+      } else {
+        total = 1;
+      }
+    }
     for (let i = 1; i <= total; i++) {
       let src;
       if (fileUrl) {
