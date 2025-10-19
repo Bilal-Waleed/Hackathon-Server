@@ -31,26 +31,38 @@ export const latest = async (req, res) => {
   try {
     const userId = req.user._id;
     const [bp, sugar, weight, report] = await Promise.all([
-      Vitals.findOne({ userId, type: 'bp' }).sort({ date: -1 }).select({ values: 1, date: 1 }).lean(),
-      Vitals.findOne({ userId, type: 'sugar' }).sort({ date: -1 }).select({ values: 1, sugarType: 1, date: 1 }).lean(),
-      Vitals.findOne({ userId, type: 'weight' }).sort({ date: -1 }).select({ values: 1, date: 1 }).lean(),
-      Report.findOne({ userId }).sort({ dateTaken: -1 }).select({ title: 1, fileType: 1, fileUrl: 1, dateTaken: 1 }).lean(),
+      Vitals.findOne({ userId, type: { $regex: /^bp$/i } })
+        .sort({ date: -1 })
+        .select({ values: 1, systolic: 1, diastolic: 1, date: 1 })
+        .lean(),
+      Vitals.findOne({ userId, type: { $regex: /^sugar$/i } })
+        .sort({ date: -1 })
+        .select({ values: 1, sugar: 1, sugarType: 1, date: 1 })
+        .lean(),
+      Vitals.findOne({ userId, type: { $regex: /^weight$/i } })
+        .sort({ date: -1 })
+        .select({ values: 1, weight: 1, date: 1 })
+        .lean(),
+      Report.findOne({ userId })
+        .sort({ dateTaken: -1 })
+        .select({ title: 1, fileType: 1, fileUrl: 1, dateTaken: 1 })
+        .lean(),
     ]);
 
     const lastBP = bp ? {
-      systolic: bp.values?.systolic ?? null,
-      diastolic: bp.values?.diastolic ?? null,
+      systolic: (bp.values?.systolic ?? bp.systolic ?? null),
+      diastolic: (bp.values?.diastolic ?? bp.diastolic ?? null),
       date: bp.date,
     } : null;
 
     const lastSugar = sugar ? {
-      value: sugar.values?.value ?? null,
+      value: (sugar.values?.value ?? sugar.sugar ?? null),
       sugarType: sugar.sugarType ?? null,
       date: sugar.date,
     } : null;
 
     const lastWeight = weight ? {
-      value: weight.values?.value ?? null,
+      value: (weight.values?.value ?? weight.weight ?? null),
       date: weight.date,
     } : null;
 
@@ -65,9 +77,9 @@ export const latest = async (req, res) => {
     // Determine last activity (latest of vitals vs report)
     let lastVital = null;
     const vitalsWithType = [
-      bp ? { _id: bp._id, type: 'bp', date: bp.date, values: bp.values } : null,
-      sugar ? { _id: sugar._id, type: 'sugar', date: sugar.date, values: sugar.values, sugarType: sugar.sugarType } : null,
-      weight ? { _id: weight._id, type: 'weight', date: weight.date, values: weight.values } : null,
+      bp ? { _id: bp._id, type: 'bp', date: bp.date, values: bp.values, systolic: bp.systolic, diastolic: bp.diastolic } : null,
+      sugar ? { _id: sugar._id, type: 'sugar', date: sugar.date, values: sugar.values, sugarType: sugar.sugarType, sugar: sugar.sugar } : null,
+      weight ? { _id: weight._id, type: 'weight', date: weight.date, values: weight.values, weight: weight.weight } : null,
     ].filter(Boolean);
     if (vitalsWithType.length) {
       lastVital = vitalsWithType.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b);
@@ -81,9 +93,9 @@ export const latest = async (req, res) => {
         lastActivity = { type: 'report', id: lastReport.id, date: lastReport.dateTaken, label: lastReport.title };
       } else {
         let label = '';
-        if (lastVital.type === 'bp') label = `${lastVital.values?.systolic ?? '-'} / ${lastVital.values?.diastolic ?? '-'}`;
-        if (lastVital.type === 'sugar') label = `${lastVital.values?.value ?? '-'} mg/dL`;
-        if (lastVital.type === 'weight') label = `${lastVital.values?.value ?? '-'} kg`;
+        if (lastVital.type === 'bp') label = `${(lastVital.values?.systolic ?? lastVital.systolic ?? '-')} / ${(lastVital.values?.diastolic ?? lastVital.diastolic ?? '-')}`;
+        if (lastVital.type === 'sugar') label = `${(lastVital.values?.value ?? lastVital.sugar ?? '-')} mg/dL`;
+        if (lastVital.type === 'weight') label = `${(lastVital.values?.value ?? lastVital.weight ?? '-')} kg`;
         lastActivity = { type: 'vital', id: lastVital._id, subtype: lastVital.type, date: lastVital.date, label };
       }
     }
